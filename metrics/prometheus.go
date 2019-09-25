@@ -833,7 +833,7 @@ func NewPrometheusCollector(i infoProvider, f ContainerLabelsFunc, includedMetri
 			extraLabels: []string{"netstat"},
 			getValues: func(s *info.ContainerStats) metricValues {
 				metrics := []metricValue{}
-				for key, val := range s.Network.NetStats {
+				for key, val := range s.Network.NetStat {
 					metrics = append(metrics, metricValue{
 						value:     float64(val),
 						labels:    []string{key},
