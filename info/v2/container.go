@@ -19,7 +19,7 @@ import (
 
 	// TODO(rjnagal): Remove dependency after moving all stats structs from v1.
 	// using v1 now for easy conversion.
-	"github.com/google/cadvisor/info/v1"
+	v1 "github.com/google/cadvisor/info/v1"
 )
 
 const (
@@ -282,6 +282,8 @@ type TcpStat struct {
 type NetworkStats struct {
 	// Network stats by interface.
 	Interfaces []v1.InterfaceStats `json:"interfaces,omitempty"`
+	// Merged key/values for net/netstat, net/snmp, and net/snmp6
+	NetStat v1.NetStat `json:"netstat"`
 	// TCP connection stats (Established, Listen...)
 	Tcp TcpStat `json:"tcp"`
 	// TCP6 connection stats (Established, Listen...)

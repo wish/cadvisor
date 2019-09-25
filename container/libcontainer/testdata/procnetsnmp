@@ -1,0 +1,6 @@
+Ip: Forwarding DefaultTTL
+Ip: 1 64
+Icmp: InMsgs InErrors
+Icmp: 7102 3
+Tcp: RtoAlgorithm RtoMin
+Tcp: 0 200

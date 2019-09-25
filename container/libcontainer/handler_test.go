@@ -89,6 +89,62 @@ func TestScanUDPStats(t *testing.T) {
 	}
 }
 
+func TestParseNetStats(t *testing.T) {
+	netstatFile := "testdata/procnetsnmp"
+	r, err := os.Open(netstatFile)
+	if err != nil {
+		t.Errorf("failure opening %s: %v", netstatFile, err)
+	}
+
+	stats, err := parseNetStats(r)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var snmpstats = info.NetStats{
+		"Ip_Forwarding":    1,
+		"Ip_DefaultTTL":    64,
+		"Icmp_InMsgs":      7102,
+		"Icmp_InErrors":    3,
+		"Tcp_RtoAlgorithm": 0,
+		"Tcp_RtoMin":       200,
+	}
+
+	for key, val := range snmpstats {
+		if parsedVal, ok := stats[key]; !ok || val != parsedVal {
+			t.Errorf("Expected %#v, got %#v", val, parsedVal)
+		}
+	}
+}
+
+func TestParseSNMP6Stats(t *testing.T) {
+	netstatFile := "testdata/procnetsnmp6"
+	r, err := os.Open(netstatFile)
+	if err != nil {
+		t.Errorf("failure opening %s: %v", netstatFile, err)
+	}
+
+	stats, err := parseSNMP6Stats(r)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var snmp6stats = info.NetStats{
+		"Ip6_InReceives":       50014,
+		"Ip6_InDelivers":       49971,
+		"Ip6_OutForwDatagrams": 0,
+		"Ip6_OutRequests":      1547,
+		"Icmp6_OutType143":     279,
+		"Udp6_InDatagrams":     48236,
+	}
+
+	for key, val := range snmp6stats {
+		if parsedVal, ok := stats[key]; !ok || val != parsedVal {
+			t.Errorf("Expected %#v, got %#v", val, parsedVal)
+		}
+	}
+}
+
 // https://github.com/docker/libcontainer/blob/v2.2.1/cgroups/fs/cpuacct.go#L19
 const nanosecondsInSeconds = 1000000000
 

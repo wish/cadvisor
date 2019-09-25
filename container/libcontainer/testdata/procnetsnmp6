@@ -1,0 +1,6 @@
+Ip6InReceives                   	50014
+Ip6InDelivers                   	49971
+Ip6OutForwDatagrams             	0
+Ip6OutRequests                  	1547
+Icmp6OutType143                 	279
+Udp6InDatagrams                 	48236

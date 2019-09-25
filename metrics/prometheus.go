@@ -825,6 +825,26 @@ func NewPrometheusCollector(i infoProvider, f ContainerLabelsFunc, includedMetri
 			},
 		}...)
 	}
+	if includedMetrics.Has(container.NetworkNetstatMetrics) {
+		c.containerMetrics = append(c.containerMetrics, containerMetric{
+			name:        "container_network_netstat_statistics",
+			help:        "netstat statistics for container",
+			valueType:   prometheus.GaugeValue,
+			extraLabels: []string{"netstat"},
+			getValues: func(s *info.ContainerStats) metricValues {
+				metrics := []metricValue{}
+				for key, val := range s.Network.NetStats {
+					metrics = append(metrics, metricValue{
+						value:     float64(val),
+						labels:    []string{key},
+						timestamp: s.Timestamp,
+					})
+				}
+				return metrics
+			},
+		})
+	}
+
 	if includedMetrics.Has(container.NetworkTcpUsageMetrics) {
 		c.containerMetrics = append(c.containerMetrics, []containerMetric{
 			{

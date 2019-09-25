@@ -408,6 +408,8 @@ type InterfaceStats struct {
 type NetworkStats struct {
 	InterfaceStats `json:",inline"`
 	Interfaces     []InterfaceStats `json:"interfaces,omitempty"`
+	// Merged key/values for net/netstat, net/snmp, and net/snmp6
+	NetStat NetStat `json:"netstat"`
 	// TCP connection stats (Established, Listen...)
 	Tcp TcpStat `json:"tcp"`
 	// TCP6 connection stats (Established, Listen...)
@@ -417,6 +419,9 @@ type NetworkStats struct {
 	// UDP6 connection stats
 	Udp6 UdpStat `json:"udp6"`
 }
+
+// Map keys in net/(netstat|snmp|snmp6) their to values
+type NetStat map[string]int64
 
 type TcpStat struct {
 	// Count of TCP connections in state "Established"

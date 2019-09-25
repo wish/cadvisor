@@ -119,6 +119,36 @@ func (h *Handler) GetStats() (*info.ContainerStats, error) {
 			stats.Network.Udp6 = u6
 		}
 	}
+	if h.includedMetrics.Has(container.NetworkNetstatMetrics) {
+		stats.Network.NetStat = info.NetStat{}
+
+		n, err := netstatsFromProc(h.rootFs, h.pid, "net/netstat")
+		if err != nil {
+			klog.V(4).Infof("Unable to get netstat stats from pid %d: %v", h.pid, err)
+		} else {
+			for key, val := range n {
+				stats.Network.NetStat[key] = val
+			}
+		}
+
+		snmp, err := netstatsFromProc(h.rootFs, h.pid, "net/snmp")
+		if err != nil {
+			klog.V(4).Infof("Unable to get snmp stats from pid %d: %v", h.pid, err)
+		} else {
+			for key, val := range snmp {
+				stats.Network.NetStat[key] = val
+			}
+		}
+
+		snmp6, err := snmp6FromProc(h.rootFs, h.pid, "net/snmp6")
+		if err != nil {
+			klog.V(4).Infof("Unable to get snmp6 stats from pid %d: %v", h.pid, err)
+		} else {
+			for key, val := range snmp6 {
+				stats.Network.NetStat[key] = val
+			}
+		}
+	}
 	if h.includedMetrics.Has(container.ProcessMetrics) {
 		paths := h.cgroupManager.GetPaths()
 		path, ok := paths["cpu"]
@@ -415,6 +445,91 @@ func udpStatsFromProc(rootFs string, pid int, file string) (info.UdpStat, error)
 	}
 
 	return udpStats, nil
+}
+
+func netstatsFromProc(rootFs string, pid int, file string) (info.NetStat, error) {
+	var err error
+	var stats info.NetStat
+
+	statsFile := path.Join(rootFs, "proc", strconv.Itoa(pid), file)
+
+	r, err := os.Open(statsFile)
+	if err != nil {
+		return stats, fmt.Errorf("failure opening %s: %v", statsFile, err)
+	}
+
+	return parseNetStats(r)
+}
+
+// adapted from github.com/prometheus/node_exporter/collector/netstat_linux.go
+func parseNetStats(r io.Reader) (info.NetStat, error) {
+	var (
+		netStats = info.NetStat{}
+		scanner  = bufio.NewScanner(r)
+	)
+
+	for scanner.Scan() {
+		nameParts := strings.Split(scanner.Text(), " ")
+		scanner.Scan()
+		valueParts := strings.Split(scanner.Text(), " ")
+		// Remove trailing :.
+		protocol := nameParts[0][:len(nameParts[0])-1]
+		if len(nameParts) != len(valueParts) {
+			return nil, fmt.Errorf("mismatch field count mismatch: %s",
+				protocol)
+		}
+		for i := 1; i < len(nameParts); i++ {
+			v, err := strconv.Atoi(valueParts[i])
+			if err != nil {
+				continue
+			}
+
+			netStats[protocol+"_"+nameParts[i]] = int64(v)
+		}
+	}
+
+	return netStats, scanner.Err()
+}
+
+func snmp6FromProc(rootFs string, pid int, file string) (info.NetStat, error) {
+	var err error
+	var stats info.NetStat
+
+	statsFile := path.Join(rootFs, "proc", strconv.Itoa(pid), file)
+
+	r, err := os.Open(statsFile)
+	if err != nil {
+		return stats, fmt.Errorf("failure opening %s: %v", statsFile, err)
+	}
+
+	return parseSNMP6Stats(r)
+}
+
+// adapted from github.com/prometheus/node_exporter/collector/netstat_linux.go
+func parseSNMP6Stats(r io.Reader) (info.NetStat, error) {
+	var (
+		netStats = info.NetStat{}
+		scanner  = bufio.NewScanner(r)
+	)
+
+	for scanner.Scan() {
+		stat := strings.Fields(scanner.Text())
+		if len(stat) < 2 {
+			continue
+		}
+		// Expect to have "6" in metric name, skip line otherwise
+		if sixIndex := strings.Index(stat[0], "6"); sixIndex != -1 {
+			protocol := stat[0][:sixIndex+1]
+			name := stat[0][sixIndex+1:]
+			v, err := strconv.Atoi(stat[1])
+			if err != nil {
+				continue
+			}
+			netStats[protocol+"_"+name] = int64(v)
+		}
+	}
+
+	return netStats, scanner.Err()
 }
 
 func scanUdpStats(r io.Reader) (info.UdpStat, error) {
